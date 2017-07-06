@@ -128,7 +128,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      *  results will be empty)
      */
     @CordaSerializable
-    data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
+    data class Page<T : ContractState>(val states: List<StateAndRef<T>>,
                                            val statesMetadata: List<StateMetadata>,
                                            val totalStatesAvailable: Long,
                                            val stateTypes: StateStatus,

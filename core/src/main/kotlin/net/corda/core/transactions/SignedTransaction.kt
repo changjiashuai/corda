@@ -2,9 +2,15 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
+import net.corda.core.contracts.AttachmentResolutionException
+import net.corda.core.contracts.NamedByHash
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -29,10 +35,10 @@ import java.util.*
  */
 // DOCSTART 1
 data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
-                             override val sigs: List<DigitalSignature.WithKey>
+                             override val sigs: List<TransactionSignature>
 ) : TransactionWithSignatures {
     // DOCEND 1
-    constructor(ctx: CoreTransaction, sigs: List<DigitalSignature.WithKey>) : this(ctx.serialize(), sigs) {
+    constructor(ctx: CoreTransaction, sigs: List<TransactionSignature>) : this(ctx.serialize(), sigs) {
         cachedTransaction = ctx
     }
 
@@ -75,10 +81,10 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     /** Returns the same transaction but with an additional (unchecked) signature. */
-    fun withAdditionalSignature(sig: DigitalSignature.WithKey) = copyWithCache(listOf(sig))
+    fun withAdditionalSignature(sig: TransactionSignature) = copyWithCache(listOf(sig))
 
     /** Returns the same transaction but with an additional (unchecked) signatures. */
-    fun withAdditionalSignatures(sigList: Iterable<DigitalSignature.WithKey>) = copyWithCache(sigList)
+    fun withAdditionalSignatures(sigList: Iterable<TransactionSignature>) = copyWithCache(sigList)
 
     /**
      * Creates a copy of the SignedTransaction that includes the provided [sigList]. Also propagates the [cachedTransaction]
@@ -92,10 +98,10 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     /** Alias for [withAdditionalSignature] to let you use Kotlin operator overloading. */
-    operator fun plus(sig: DigitalSignature.WithKey) = withAdditionalSignature(sig)
+    operator fun plus(sig: TransactionSignature) = withAdditionalSignature(sig)
 
     /** Alias for [withAdditionalSignatures] to let you use Kotlin operator overloading. */
-    operator fun plus(sigList: Collection<DigitalSignature.WithKey>) = withAdditionalSignatures(sigList)
+    operator fun plus(sigList: Collection<TransactionSignature>) = withAdditionalSignatures(sigList)
 
     /**
      * Checks the transaction's signatures are valid, optionally calls [verifyRequiredSignatures] to

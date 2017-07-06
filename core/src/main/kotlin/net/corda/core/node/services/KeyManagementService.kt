@@ -3,6 +3,8 @@ package net.corda.core.node.services
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.identity.AnonymousPartyAndPath
+import net.corda.core.crypto.MerkleRootWithMeta
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.PartyAndCertificate
 import java.security.PublicKey
 
@@ -53,4 +55,7 @@ interface KeyManagementService {
      */
     @Suspendable
     fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey
+
+    @Suspendable
+    fun sign(merkleRootWithMeta: MerkleRootWithMeta, publicKey: PublicKey): TransactionSignature
 }

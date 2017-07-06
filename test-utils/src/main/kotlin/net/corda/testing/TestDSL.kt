@@ -335,15 +335,16 @@ data class TestLedgerDSLInterpreter private constructor(
  */
 fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>) = transactionsToSign.map { wtx ->
     check(wtx.requiredSigningKeys.isNotEmpty())
-    val signatures = ArrayList<DigitalSignature.WithKey>()
+    val signatures = ArrayList<TransactionSignature>()
     val keyLookup = HashMap<PublicKey, KeyPair>()
 
     (ALL_TEST_KEYS + extraKeys).forEach {
         keyLookup[it.public] = it
     }
+    val merkleRootWithMeta = MerkleRootWithMeta(wtx.id, TransactionSignatureMeta(1))
     wtx.requiredSigningKeys.expandedCompositeKeys.forEach {
         val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
-        signatures += key.sign(wtx.id)
+        signatures += key.sign(merkleRootWithMeta)
     }
     SignedTransaction(wtx, signatures)
 }

@@ -117,16 +117,13 @@ class KryoTests {
     }
 
     @Test
-    fun `serialize - deserialize MetaData`() {
+    fun `serialize - deserialize MerkleRootWithMeta`() {
         val testString = "Hello World"
         val testBytes = testString.toByteArray()
-        val keyPair1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-        val bitSet = java.util.BitSet(10)
-        bitSet.set(3)
 
-        val meta = MetaData("ECDSA_SECP256K1_SHA256", "M9", SignatureType.FULL, Instant.now(), bitSet, bitSet, testBytes, keyPair1.public)
+        val meta = MerkleRootWithMeta(testBytes.sha256(), TransactionSignatureMeta(1))
         val serializedMetaData = meta.serialize(factory, context).bytes
-        val meta2 = serializedMetaData.deserialize<MetaData>(factory, context)
+        val meta2 = serializedMetaData.deserialize<MerkleRootWithMeta>(factory, context)
         assertEquals(meta2, meta)
     }
 

@@ -5,6 +5,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.sign
+import net.corda.core.crypto.*
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -19,8 +21,9 @@ import kotlin.test.assertNotEquals
 
 class TransactionTests : TestDependencyInjectionBase() {
     private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair, notarySig: Boolean = true): SignedTransaction {
-        val keySigs = keys.map { it.sign(wtx.id.bytes) }
-        val sigs = if (notarySig) keySigs + DUMMY_NOTARY_KEY.sign(wtx.id.bytes) else keySigs
+        val merkleRootWithMeta = MerkleRootWithMeta(wtx.id, TransactionSignatureMeta(1))
+        val keySigs = keys.map { it.sign(merkleRootWithMeta) }
+        val sigs = if (notarySig) keySigs + DUMMY_NOTARY_KEY.sign(merkleRootWithMeta) else keySigs
         return SignedTransaction(wtx, sigs)
     }
 

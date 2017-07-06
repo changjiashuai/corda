@@ -7,8 +7,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.`issued by`
 import net.corda.contracts.asset.`owned by`
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
@@ -604,11 +603,12 @@ class TwoPartyTradeFlowTests {
 
         val signed = wtxToSign.map {
             val id = it.id
-            val sigs = mutableListOf<DigitalSignature.WithKey>()
-            sigs.add(node.services.keyManagementService.sign(id.bytes, node.services.legalIdentityKey))
-            sigs.add(notaryNode.services.keyManagementService.sign(id.bytes, notaryNode.services.notaryIdentityKey))
+            val sigs = mutableListOf<TransactionSignature>()
+            val merkleRootWithMeta = MerkleRootWithMeta(id, TransactionSignatureMeta(1))
+            sigs.add(node.services.keyManagementService.sign(merkleRootWithMeta, node.services.legalIdentityKey))
+            sigs.add(notaryNode.services.keyManagementService.sign(merkleRootWithMeta, notaryNode.services.notaryIdentityKey))
             extraSigningNodes.forEach { currentNode ->
-                sigs.add(currentNode.services.keyManagementService.sign(id.bytes, currentNode.info.legalIdentity.owningKey))
+                sigs.add(currentNode.services.keyManagementService.sign(merkleRootWithMeta, currentNode.info.legalIdentity.owningKey))
             }
             SignedTransaction(it, sigs)
         }

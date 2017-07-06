@@ -3,7 +3,8 @@ package net.corda.node.services.transactions
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigitalSignature
+import net.corda.core.contracts.TransactionType
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
@@ -132,7 +133,7 @@ class NotaryServiceTests {
         notaryError.conflict.verified()
     }
 
-    private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<List<DigitalSignature.WithKey>> {
+    private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<List<TransactionSignature>> {
         val flow = NotaryFlow.Client(stx)
         val future = clientNode.services.startFlow(flow).resultFuture
         mockNet.runNetwork()

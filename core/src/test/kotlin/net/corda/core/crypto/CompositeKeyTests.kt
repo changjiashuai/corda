@@ -36,10 +36,12 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     val charliePublicKey: PublicKey = charlieKey.public
 
     val message = OpaqueBytes("Transaction".toByteArray())
+    val secureHash = message.sha256()
+    val merkleRootWithMeta = MerkleRootWithMeta(secureHash, TransactionSignatureMeta(1))
 
-    val aliceSignature = aliceKey.sign(message)
-    val bobSignature = bobKey.sign(message)
-    val charlieSignature = charlieKey.sign(message)
+    val aliceSignature = aliceKey.sign(merkleRootWithMeta)
+    val bobSignature = bobKey.sign(merkleRootWithMeta)
+    val charlieSignature = charlieKey.sign(merkleRootWithMeta)
 
     @Test
     fun `(Alice) fulfilled by Alice signature`() {
@@ -153,11 +155,12 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
      * Check that verifying a composite signature using the [CompositeSignature] engine works.
      */
     @Test
-    fun `composite signature verification`() {
+    fun `composite TransactionSignature verification `() {
         val twoOfThree = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey, charliePublicKey).build(threshold = 2)
+
         val engine = CompositeSignature()
         engine.initVerify(twoOfThree)
-        engine.update(message.bytes)
+        engine.update(secureHash.bytes)
 
         assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature)).serialize().bytes) }
         assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(bobSignature)).serialize().bytes) }
@@ -168,7 +171,7 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
         assertTrue { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, bobSignature, charlieSignature)).serialize().bytes) }
 
         // Check the underlying signature is validated
-        val brokenBobSignature = DigitalSignature.WithKey(bobSignature.by, aliceSignature.bytes)
+        val brokenBobSignature = TransactionSignature(aliceSignature.bytes, bobSignature.by, merkleRootWithMeta.transactionSignatureMeta)
         assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, brokenBobSignature)).serialize().bytes) }
     }
 
@@ -282,19 +285,19 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
 
     @Test
     fun `CompositeKey from multiple signature schemes and signature verification`() {
-        val (privRSA, pubRSA) = Crypto.generateKeyPair(Crypto.RSA_SHA256)
-        val (privK1, pubK1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
-        val (privR1, pubR1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val (privEd, pubEd) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
-        val (privSP, pubSP) = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val keyPairRSA = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
 
-        val RSASignature = privRSA.sign(message.bytes, pubRSA)
-        val K1Signature = privK1.sign(message.bytes, pubK1)
-        val R1Signature = privR1.sign(message.bytes, pubR1)
-        val EdSignature = privEd.sign(message.bytes, pubEd)
-        val SPSignature = privSP.sign(message.bytes, pubSP)
+        val RSASignature = keyPairRSA.sign(merkleRootWithMeta)
+        val K1Signature = keyPairK1.sign(merkleRootWithMeta)
+        val R1Signature = keyPairR1.sign(merkleRootWithMeta)
+        val EdSignature = keyPairEd.sign(merkleRootWithMeta)
+        val SPSignature = keyPairSP.sign(merkleRootWithMeta)
 
-        val compositeKey = CompositeKey.Builder().addKeys(pubRSA, pubK1, pubR1, pubEd, pubSP).build() as CompositeKey
+        val compositeKey = CompositeKey.Builder().addKeys(keyPairRSA.public, keyPairK1.public, keyPairR1.public, keyPairEd.public, keyPairSP.public).build() as CompositeKey
 
         val signatures = listOf(RSASignature, K1Signature, R1Signature, EdSignature, SPSignature)
         assertTrue { compositeKey.isFulfilledBy(signatures.byKeys()) }
@@ -307,19 +310,19 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     @Test
     fun `Test save to keystore`() {
         // From test case [CompositeKey from multiple signature schemes and signature verification]
-        val (privRSA, pubRSA) = Crypto.generateKeyPair(Crypto.RSA_SHA256)
-        val (privK1, pubK1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
-        val (privR1, pubR1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val (privEd, pubEd) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
-        val (privSP, pubSP) = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val keyPairRSA = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
 
-        val RSASignature = privRSA.sign(message.bytes, pubRSA)
-        val K1Signature = privK1.sign(message.bytes, pubK1)
-        val R1Signature = privR1.sign(message.bytes, pubR1)
-        val EdSignature = privEd.sign(message.bytes, pubEd)
-        val SPSignature = privSP.sign(message.bytes, pubSP)
+        val RSASignature = keyPairRSA.sign(merkleRootWithMeta)
+        val K1Signature = keyPairK1.sign(merkleRootWithMeta)
+        val R1Signature = keyPairR1.sign(merkleRootWithMeta)
+        val EdSignature = keyPairEd.sign(merkleRootWithMeta)
+        val SPSignature = keyPairSP.sign(merkleRootWithMeta)
 
-        val compositeKey = CompositeKey.Builder().addKeys(pubRSA, pubK1, pubR1, pubEd, pubSP).build() as CompositeKey
+        val compositeKey = CompositeKey.Builder().addKeys(keyPairRSA.public, keyPairK1.public, keyPairR1.public, keyPairEd.public, keyPairSP.public).build() as CompositeKey
 
         val signatures = listOf(RSASignature, K1Signature, R1Signature, EdSignature, SPSignature)
         assertTrue { compositeKey.isFulfilledBy(signatures.byKeys()) }
