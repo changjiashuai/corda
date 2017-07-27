@@ -9,6 +9,11 @@ interface I {
     fun getName() : String
 }
 
+interface II {
+    fun getAge() : Int
+    fun getThingWithName(): I
+}
+
 /**
  * These tests work by having the class carpenter build the classes we serialise and then deserialise. Because
  * those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
@@ -109,6 +114,38 @@ class DeserializeNeedingCarpentryTests {
             assertEquals(sentinel++, it::class.java.getMethod("getV1").invoke(it))
             assertEquals(sentinel++, it::class.java.getMethod("getV2").invoke(it))
         }
+    }
+
+    @Test
+    fun mapOfInterfaces() {
+        val cc = ClassCarpenter()
+
+        val implementsI = cc.build(ClassSchema(
+                "implementsI", mapOf("name" to NonNullableField(String::class.java)),
+                interfaces = listOf (I::class.java)))
+
+        val implementsII = cc.build(ClassSchema("ImplementsII", mapOf (
+                "age" to NonNullableField(Int::class.java),
+                "thingWithName" to NullableField(I::class.java)),
+                interfaces = listOf (II::class.java)))
+
+        val wrapper = cc.build(ClassSchema("wrapper", mapOf (
+                "IIs" to NonNullableField(MutableMap::class.java))))
+
+        val tmp: MutableMap<String, II> = mutableMapOf()
+        val toSerialise = wrapper.constructors.first().newInstance(tmp)
+        val testData = arrayOf(Pair ("Fred", 12), Pair ("Bob", 50), Pair ("Thirsty", 101))
+
+        testData.forEach {
+            (wrapper.getMethod("getIIs").invoke(toSerialise) as MutableMap<String, II>)[it.first] =
+                    implementsII.constructors.first().newInstance(it.second,
+                            implementsI.constructors.first().newInstance(it.first) as I) as II
+        }
+
+        // Now do the actual test by serialising and deserialising [wrapper]
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(wrapper)
+        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+
     }
 
     @Test
