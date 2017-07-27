@@ -10,8 +10,12 @@ interface I {
 }
 
 interface II {
-    fun getAge() : Int
-    fun getThingWithName(): I
+    fun returnName() : String
+}
+
+interface III {
+    fun returnAge() : Int
+    fun returnThingWithName(): II
 }
 
 /**
@@ -21,7 +25,6 @@ interface II {
  * replicates the situation where a receiver doesn't have some or all elements of a schema present on it's classpath
  */
 class DeserializeNeedingCarpentryTests {
-
     companion object {
         /**
          * If you want to see the schema encoded into the envelope after serialisation change this to true
@@ -117,35 +120,58 @@ class DeserializeNeedingCarpentryTests {
     }
 
     @Test
-    fun mapOfInterfaces() {
-        val cc = ClassCarpenter()
+    fun mapOfKnown() {
+        class lII (val name: String) : II {
+            override fun returnName() = name
+        }
 
-        val implementsI = cc.build(ClassSchema(
-                "implementsI", mapOf("name" to NonNullableField(String::class.java)),
-                interfaces = listOf (I::class.java)))
+        class lIII (val age: Int, val thingWithName: II): III {
+            override fun returnAge(): Int = age
+            override fun returnThingWithName() = thingWithName
+        }
 
-        val implementsII = cc.build(ClassSchema("ImplementsII", mapOf (
-                "age" to NonNullableField(Int::class.java),
-                "thingWithName" to NullableField(I::class.java)),
-                interfaces = listOf (II::class.java)))
-
-        val wrapper = cc.build(ClassSchema("wrapper", mapOf (
-                "IIs" to NonNullableField(MutableMap::class.java))))
-
-        val tmp: MutableMap<String, II> = mutableMapOf()
-        val toSerialise = wrapper.constructors.first().newInstance(tmp)
+        data class Wrapper(val IIIs: MutableMap<String, III>)
+        val wrapper = Wrapper (mutableMapOf())
         val testData = arrayOf(Pair ("Fred", 12), Pair ("Bob", 50), Pair ("Thirsty", 101))
 
         testData.forEach {
-            (wrapper.getMethod("getIIs").invoke(toSerialise) as MutableMap<String, II>)[it.first] =
-                    implementsII.constructors.first().newInstance(it.second,
-                            implementsI.constructors.first().newInstance(it.first) as I) as II
+            wrapper.IIIs[it.first] = lIII(it.second, lII(it.first))
         }
 
         // Now do the actual test by serialising and deserialising [wrapper]
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(wrapper)
         val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+    }
 
+    @Test
+    fun mapOfInterfaces() {
+        val cc = ClassCarpenter()
+
+        val implementsI = cc.build(ClassSchema(
+                "implementsI", mapOf("name" to NonNullableField(String::class.java)),
+                interfaces = listOf (II::class.java)))
+
+        val implementsII = cc.build(ClassSchema("ImplementsII", mapOf (
+                "age" to NonNullableField(Int::class.java),
+                "thingWithName" to NullableField(I::class.java)),
+                interfaces = listOf (III::class.java)))
+
+        val wrapper = cc.build(ClassSchema("wrapper", mapOf (
+                "IIs" to NonNullableField(MutableMap::class.java))))
+
+        val tmp: MutableMap<String, III> = mutableMapOf()
+        val toSerialise = wrapper.constructors.first().newInstance(tmp)
+        val testData = arrayOf(Pair ("Fred", 12), Pair ("Bob", 50), Pair ("Thirsty", 101))
+
+        testData.forEach {
+            (wrapper.getMethod("getIIs").invoke(toSerialise) as MutableMap<String, III>)[it.first] =
+                    implementsII.constructors.first().newInstance(it.second,
+                            implementsI.constructors.first().newInstance(it.first) as I) as III
+        }
+
+        // Now do the actual test by serialising and deserialising [wrapper]
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(wrapper)
+        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
     @Test

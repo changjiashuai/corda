@@ -203,6 +203,7 @@ class ClassCarpenter {
 
     private fun ClassWriter.generateGetters(schema: Schema) {
         for ((name, type) in schema.fields) {
+            println ("GETTER- get${name.capitalize()}")
             with(visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + type.descriptor, null, null)) {
                 type.addNullabilityAnnotation(this)
                 visitCode()
