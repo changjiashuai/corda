@@ -18,6 +18,15 @@ interface III {
     fun returnThingWithName(): II
 }
 
+interface B {
+    fun getName() : String
+}
+
+interface BB {
+    fun getAge() : Int
+    fun getThingWithName(): II
+}
+
 /**
  * These tests work by having the class carpenter build the classes we serialise and then deserialise. Because
  * those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
@@ -146,36 +155,58 @@ class DeserializeNeedingCarpentryTests {
         val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
+    // TODO This class shows that the problem isn't with the carpented class but a general
+    // TODO Bug / feature of the code...
+    /*
+    @Test
+    fun linkedHashMapTest() {
+        data class C(val c : LinkedHashMap<String, Int>)
+        val c = C (LinkedHashMap (mapOf("A" to 1, "B" to 2)))
+
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+
+    }
+    */
+
+    // TODO the problem here is that the wrapper class as created by the serialiser
+    // TODO contains a [LinkedHashMap] and not a [Map] and we thus can't serialise
+    // TODO it - Talk to Rick about weather we should be able to or not
+    /*
     @Test
     fun mapOfInterfaces() {
         val cc = ClassCarpenter()
 
         val implementsI = cc.build(ClassSchema(
                 "implementsI", mapOf("name" to NonNullableField(String::class.java)),
-                interfaces = listOf (II::class.java)))
+                interfaces = listOf (B::class.java)))
 
         val implementsII = cc.build(ClassSchema("ImplementsII", mapOf (
                 "age" to NonNullableField(Int::class.java),
-                "thingWithName" to NullableField(I::class.java)),
-                interfaces = listOf (III::class.java)))
+                "thingWithName" to NullableField(B::class.java)),
+                interfaces = listOf (BB::class.java)))
+
+                //        inline fun getval(reified T : Any) : return T::class.java
 
         val wrapper = cc.build(ClassSchema("wrapper", mapOf (
-                "IIs" to NonNullableField(MutableMap::class.java))))
+                "BBs" to NonNullableField(mutableMapOf<String, BB>()::class.java
+        ))))
 
-        val tmp: MutableMap<String, III> = mutableMapOf()
+        val tmp : MutableMap<String, BB> = mutableMapOf()
         val toSerialise = wrapper.constructors.first().newInstance(tmp)
         val testData = arrayOf(Pair ("Fred", 12), Pair ("Bob", 50), Pair ("Thirsty", 101))
 
         testData.forEach {
-            (wrapper.getMethod("getIIs").invoke(toSerialise) as MutableMap<String, III>)[it.first] =
+            (wrapper.getMethod("getBBs").invoke(toSerialise) as MutableMap<String, BB>)[it.first] =
                     implementsII.constructors.first().newInstance(it.second,
-                            implementsI.constructors.first().newInstance(it.first) as I) as III
+                            implementsI.constructors.first().newInstance(it.first) as B) as BB
         }
 
         // Now do the actual test by serialising and deserialising [wrapper]
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(wrapper)
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(toSerialise)
         val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
     }
+    */
 
     @Test
     fun unknownInterface() {

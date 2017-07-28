@@ -56,6 +56,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
      */
     @Throws(NotSerializableException::class)
     fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
+        println ("Factory::get - $declaredType")
         val declaredClass = declaredType.asClass()
         if (declaredClass != null) {
             val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
@@ -219,6 +220,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     }
 
     private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> {
+        println ("makeClassSerializer - $clazz $type $declaredType")
         return serializersByType.computeIfAbsent(type) {
             if (isPrimitive(clazz)) {
                 AMQPPrimitiveSerializer(clazz)
@@ -315,15 +317,18 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
         private val namesOfPrimitiveTypes: Map<String, Class<*>> = primitiveTypeNames.map { it.value to it.key }.toMap()
 
-        fun nameForType(type: Type) : String = when (type) {
+        fun nameForType(type: Type, offset: String = "") : String {
+            println ("${offset}NameForType $type")
+            return when (type) {
                 is Class<*> -> {
                     primitiveTypeName(type) ?: if (type.isArray) {
-                        "${nameForType(type.componentType)}${if(type.componentType.isPrimitive)"[p]" else "[]"}"
+                        "${nameForType(type.componentType, "$offset  ")}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
                     } else type.name
                 }
-                is ParameterizedType -> "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
-                is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
+                is ParameterizedType -> "${nameForType(type.rawType, "$offset  ")}<${type.actualTypeArguments.joinToString { nameForType(it, "$offset  ") }}>"
+                is GenericArrayType -> "${nameForType(type.genericComponentType, "$offset  ")}[]"
                 else -> throw NotSerializableException("Unable to render type $type to a string.")
+            }
         }
 
         private fun typeForName(
