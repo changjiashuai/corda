@@ -129,7 +129,7 @@ class ClassCarpenter {
     private fun generateClass(classSchema: Schema): Class<*> {
         return generate(classSchema) { cw, schema ->
             val superName = schema.superclass?.jvmName ?: "java/lang/Object"
-            var interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
+            val interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
 
             if (SimpleFieldAccess::class.java !in schema.interfaces) interfaces.add(SimpleFieldAccess::class.java.name.jvm)
 
@@ -203,7 +203,6 @@ class ClassCarpenter {
 
     private fun ClassWriter.generateGetters(schema: Schema) {
         for ((name, type) in schema.fields) {
-            println ("GETTER- get${name.capitalize()}")
             with(visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + type.descriptor, null, null)) {
                 type.addNullabilityAnnotation(this)
                 visitCode()
@@ -307,9 +306,9 @@ class ClassCarpenter {
                             + "with 'get': ${itf.name}.${it.name}")
                 }
 
-                // if we're trying to carpent a class that prior to serialisation / deserialisation
+                // If we're trying to carpent a class that prior to serialisation / deserialisation
                 // was made by a carpenter then we can ignore this (it will implement a plain get
-                // method from SimpleFieldAccess)
+                // method from SimpleFieldAccess).
                 if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) return@forEach
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields))
