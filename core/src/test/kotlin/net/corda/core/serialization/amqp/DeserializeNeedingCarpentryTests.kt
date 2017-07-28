@@ -119,6 +119,9 @@ class DeserializeNeedingCarpentryTests {
         }
     }
 
+    // technically this test doesn't test anything (relevent to carpanter / serialiser interaction) since
+    // all the classes are knwon, what does do is replicate the test below to demonstrate it should
+    // all work
     @Test
     fun mapOfKnown() {
         class lII (val name: String) : II {
