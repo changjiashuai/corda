@@ -157,7 +157,6 @@ class DeserializeNeedingCarpentryTests {
 
     // TODO This class shows that the problem isn't with the carpented class but a general
     // TODO Bug / feature of the code...
-    /*
     @Test
     fun linkedHashMapTest() {
         data class C(val c : LinkedHashMap<String, Int>)
@@ -165,14 +164,20 @@ class DeserializeNeedingCarpentryTests {
 
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
         val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
-
     }
-    */
+
+    @Test
+    fun HashMapTest() {
+        data class C(val c : HashMap<String, Int>)
+        val c = C (HashMap (mapOf("A" to 1, "B" to 2)))
+
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(c)
+        val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
+    }
 
     // TODO the problem here is that the wrapper class as created by the serialiser
     // TODO contains a [LinkedHashMap] and not a [Map] and we thus can't serialise
     // TODO it - Talk to Rick about weather we should be able to or not
-    /*
     @Test
     fun mapOfInterfaces() {
         val cc = ClassCarpenter()
@@ -206,7 +211,6 @@ class DeserializeNeedingCarpentryTests {
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf).serialize(toSerialise)
         val deserializedObj = DeserializationInput(sf).deserialize(serialisedBytes)
     }
-    */
 
     @Test
     fun unknownInterface() {

@@ -77,6 +77,17 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
         if (javaConstructor == null) {
             throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
         }
-        return javaConstructor.newInstance(*properties.toTypedArray())
+        println ("\nConstruct - $typeName\n$properties")
+        properties.toTypedArray().forEach {
+            println ("  $it ${it!!::class.java}")
+        }
+
+        //return javaConstructor.newInstance(*properties.toTypedArray())
+        //return javaConstructor.newInstance(properties.toTypedArray()[0] as LinkedHashMap<String, Int>)
+
+        //val tmp = LinkedHashMap<String, Int>  (properties[0] as Map<String, Int>)
+        //return javaConstructor.newInstance(tmp)
+
+        return javaConstructor.newInstance((properties[0] as Map<String, Int>) as LinkedHashMap<String, Int>)
     }
 }

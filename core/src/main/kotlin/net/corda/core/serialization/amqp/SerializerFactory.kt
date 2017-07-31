@@ -65,10 +65,12 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                     CollectionSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(declaredClass, arrayOf(AnyType), null), this)
                 }
             } else if (Map::class.java.isAssignableFrom(declaredClass)) {
+                println ("make map serializer")
                 return serializersByType.computeIfAbsent(declaredClass) {
                     makeMapSerializer(declaredType as? ParameterizedType ?: DeserializedParameterizedType(declaredClass, arrayOf(AnyType, AnyType), null))
                 }
             } else {
+                println ("make class serializer")
                 return makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
             }
         } else {
@@ -275,6 +277,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     }
 
     private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<Any> {
+        println ("makeMapSerializer: $declaredType")
         val rawType = declaredType.rawType as Class<*>
         rawType.checkNotUnorderedHashMap()
         return MapSerializer(declaredType, this)

@@ -20,7 +20,8 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
         private val supportedTypes: Map<Class<out Map<*, *>>, (Map<*, *>) -> Map<*, *>> = mapOf(
                 Map::class.java to { map -> Collections.unmodifiableMap(map) },
                 SortedMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) },
-                NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) }
+                NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) },
+                LinkedHashMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) }
         )
 
         private fun findConcreteType(clazz: Class<*>): (Map<*, *>) -> Map<*, *> {
@@ -31,6 +32,10 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
     private val concreteBuilder: (Map<*, *>) -> Map<*, *> = findConcreteType(declaredType.rawType as Class<*>)
 
     private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
+
+    init {
+        println ("Map Serializer - $typeNotation")
+    }
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
@@ -57,6 +62,7 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         // TODO: General generics question. Do we need to validate that entries in Maps and Collections match the generic type?  Is it a security hole?
         val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schema, input, it) }
+
         return concreteBuilder(entries.toMap())
     }
 
