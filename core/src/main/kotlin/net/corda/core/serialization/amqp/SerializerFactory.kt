@@ -56,7 +56,6 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
      */
     @Throws(NotSerializableException::class)
     fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
-        println ("Factory::get - $declaredType")
         val declaredClass = declaredType.asClass()
         if (declaredClass != null) {
             val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
@@ -219,9 +218,8 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> {
-        println ("makeClassSerializer - $clazz $type $declaredType")
-        return serializersByType.computeIfAbsent(type) {
+    private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> =
+            serializersByType.computeIfAbsent(type) {
             if (isPrimitive(clazz)) {
                 AMQPPrimitiveSerializer(clazz)
             } else {
@@ -239,7 +237,6 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                     }
                 }
             }
-        }
     }
 
     internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
@@ -317,9 +314,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
         private val namesOfPrimitiveTypes: Map<String, Class<*>> = primitiveTypeNames.map { it.value to it.key }.toMap()
 
-        fun nameForType(type: Type, offset: String = "") : String {
-            println ("${offset}NameForType $type")
-            return when (type) {
+        fun nameForType(type: Type, offset: String = "") : String = when (type) {
                 is Class<*> -> {
                     primitiveTypeName(type) ?: if (type.isArray) {
                         "${nameForType(type.componentType, "$offset  ")}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
@@ -328,7 +323,6 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 is ParameterizedType -> "${nameForType(type.rawType, "$offset  ")}<${type.actualTypeArguments.joinToString { nameForType(it, "$offset  ") }}>"
                 is GenericArrayType -> "${nameForType(type.genericComponentType, "$offset  ")}[]"
                 else -> throw NotSerializableException("Unable to render type $type to a string.")
-            }
         }
 
         private fun typeForName(

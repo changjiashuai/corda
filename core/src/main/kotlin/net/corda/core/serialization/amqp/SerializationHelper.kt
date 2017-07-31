@@ -72,9 +72,6 @@ private fun <T : Any> propertiesForSerializationFromConstructor(kotlinConstructo
     val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.groupBy { it.name }.mapValues { it.value[0] }
     val rc: MutableList<PropertySerializer> = ArrayList(kotlinConstructor.parameters.size)
     for (param in kotlinConstructor.parameters) {
-        println ("  ${param.name}")
-    }
-    for (param in kotlinConstructor.parameters) {
         val name = param.name ?: throw NotSerializableException("Constructor parameter of $clazz has no name.")
         val matchingProperty = properties[name] ?: throw NotSerializableException("No property matching constructor parameter named $name of $clazz." +
                 " If using Java, check that you have the -parameters option specified in the Java compiler.")

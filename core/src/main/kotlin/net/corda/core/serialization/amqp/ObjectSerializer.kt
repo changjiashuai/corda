@@ -17,7 +17,6 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
     internal val propertySerializers: Collection<PropertySerializer>
 
     init {
-        println("ObjectSerializer: $clazz")
         val kotlinConstructor = constructorForDeserialization(clazz)
         javaConstructor = kotlinConstructor?.javaConstructor
         propertySerializers = propertiesForSerialization(kotlinConstructor, clazz, factory)
