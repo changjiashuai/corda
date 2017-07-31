@@ -173,6 +173,16 @@ open class TransactionBuilder(
     }
 
     /**
+     * Sign the built transaction and return it. This is an internal function for use by the service hub, please use
+     * [ServiceHub.signInitialTransaction] instead.
+     */
+    fun signInitialTransaction(sig: DigitalSignature.WithKey): SignedTransaction {
+        val wtx = toWireTransaction()
+        currentSigs.add(sig)
+        return SignedTransaction(wtx, ArrayList(currentSigs))
+    }
+
+    /**
      * Sign the built transaction and return it. This is an internal function for use by unit tests which do not have
      * full node.
      */
