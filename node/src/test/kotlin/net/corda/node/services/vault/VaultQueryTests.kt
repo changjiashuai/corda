@@ -1283,7 +1283,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "linearString"), Sort.Direction.DESC)))
 
             val results = vaultQuerySvc.queryBy<DummyLinearContract.State>((vaultCriteria), sorting = sorting)
-            results.states.forEach { println("${it.state.data.linearString}") }
+            results.states.forEach { println(it.state.data.linearString) }
             assertThat(results.states).hasSize(6)
         }
     }
@@ -1555,21 +1555,20 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper =
-                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        signWith(MEGA_CORP_KEY)
-                        signWith(DUMMY_NOTARY_KEY)
-                    }.toSignedTransaction()
+                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                        builder.signInitialTransaction(MEGA_CORP_KEY).withAdditionalSignature(DUMMY_NOTARY_KEY)
+                    }
+
             services.recordTransactions(commercialPaper)
 
             // MegaCorp™ now issues £10,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue2 = 10000.POUNDS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper2 =
-                    CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        signWith(MEGA_CORP_KEY)
-                        signWith(DUMMY_NOTARY_KEY)
-                    }.toSignedTransaction()
+                    CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                        builder.signInitialTransaction(MEGA_CORP_KEY).withAdditionalSignature(DUMMY_NOTARY_KEY)
+                    }
             services.recordTransactions(commercialPaper2)
 
             val ccyIndex = builder { CommercialPaperSchemaV1.PersistentCommercialPaperState::currency.equal(USD.currencyCode) }
@@ -1592,21 +1591,19 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper =
-                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        signWith(MEGA_CORP_KEY)
-                        signWith(DUMMY_NOTARY_KEY)
-                    }.toSignedTransaction()
+                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                        builder.signInitialTransaction(MEGA_CORP_KEY).withAdditionalSignature(DUMMY_NOTARY_KEY)
+                    }
             services.recordTransactions(commercialPaper)
 
             // MegaCorp™ now issues £5,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue2 = 5000.POUNDS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper2 =
-                    CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        signWith(MEGA_CORP_KEY)
-                        signWith(DUMMY_NOTARY_KEY)
-                    }.toSignedTransaction()
+                    CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                        builder.signInitialTransaction(MEGA_CORP_KEY).withAdditionalSignature(DUMMY_NOTARY_KEY)
+                    }
             services.recordTransactions(commercialPaper2)
 
             val result = builder {
@@ -1856,12 +1853,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 5) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 1) {}
                     }
             )
@@ -1904,12 +1901,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
                         require(consumed.size == 1) {}
-                        require(produced.size == 0) {}
+                        require(produced.isEmpty()) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
                         require(consumed.size == 5) {}
-                        require(produced.size == 0) {}
+                        require(produced.isEmpty()) {}
                     }
             )
         }
@@ -1950,12 +1947,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 5) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 1) {}
                     },
                     expect { (consumed, produced, flowId) ->
@@ -1966,7 +1963,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
                         require(consumed.size == 5) {}
-                        require(produced.size == 0) {}
+                        require(produced.isEmpty()) {}
                     }
             )
         }
@@ -2006,17 +2003,17 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 10) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 3) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 1) {}
                     }
             )
@@ -2056,12 +2053,12 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 3) {}
                     },
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
-                        require(consumed.size == 0) {}
+                        require(consumed.isEmpty()) {}
                         require(produced.size == 1) {}
                     }
             )

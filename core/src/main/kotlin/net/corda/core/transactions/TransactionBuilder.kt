@@ -6,6 +6,7 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.KeyManagementService
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
@@ -153,18 +154,33 @@ open class TransactionBuilder(
     @Deprecated("Signatures should be gathered on a SignedTransaction instead.")
     protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
 
-    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
-    fun signWith(key: KeyPair): TransactionBuilder {
-        val data = toWireTransaction().id
-        addSignatureUnchecked(key.sign(data.bytes))
-        return this
-    }
-
     /** Adds the signature directly to the transaction, without checking it for validity. */
     @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun addSignatureUnchecked(sig: DigitalSignature.WithKey): TransactionBuilder {
         currentSigs.add(sig)
         return this
+    }
+
+    /**
+     * Sign the built transaction and return it. This is an internal function for use by the service hub, please use
+     * [ServiceHub.signInitialTransaction] instead.
+     */
+    fun signInitialTransaction(keyManagementService: KeyManagementService, publicKey: PublicKey): SignedTransaction {
+        val wtx = toWireTransaction()
+        val sig = keyManagementService.sign(wtx.id.bytes, publicKey)
+        currentSigs.add(sig)
+        return SignedTransaction(wtx, ArrayList(currentSigs))
+    }
+
+    /**
+     * Sign the built transaction and return it. This is an internal function for use by unit tests which do not have
+     * full node.
+     */
+    fun signInitialTransaction(keyPair: KeyPair): SignedTransaction {
+        val wtx = toWireTransaction()
+        val sig = keyPair.sign(wtx.id.bytes)
+        currentSigs.add(sig)
+        return SignedTransaction(wtx, ArrayList(currentSigs))
     }
 
     @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
