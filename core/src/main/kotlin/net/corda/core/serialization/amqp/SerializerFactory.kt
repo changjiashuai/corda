@@ -314,14 +314,14 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
         private val namesOfPrimitiveTypes: Map<String, Class<*>> = primitiveTypeNames.map { it.value to it.key }.toMap()
 
-        fun nameForType(type: Type, offset: String = "") : String = when (type) {
+        fun nameForType(type: Type) : String = when (type) {
                 is Class<*> -> {
                     primitiveTypeName(type) ?: if (type.isArray) {
-                        "${nameForType(type.componentType, "$offset  ")}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
+                        "${nameForType(type.componentType)}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
                     } else type.name
                 }
-                is ParameterizedType -> "${nameForType(type.rawType, "$offset  ")}<${type.actualTypeArguments.joinToString { nameForType(it, "$offset  ") }}>"
-                is GenericArrayType -> "${nameForType(type.genericComponentType, "$offset  ")}[]"
+                is ParameterizedType -> "${nameForType(type.rawType)ype.actualTypeArguments.joinToString { nameForType(it) }}>"
+                is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
                 else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 
