@@ -206,6 +206,7 @@ class CommercialPaperTestsGeneric {
     private lateinit var alicesVault: Vault<ContractState>
 
     private val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+    private val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
 
     private lateinit var moveTX: SignedTransaction
 
@@ -216,8 +217,7 @@ class CommercialPaperTestsGeneric {
         val databaseAlice = configureDatabase(dataSourcePropsAlice, makeTestDatabaseProperties())
         databaseAlice.transaction {
 
-            // TODO: Cash issuer should have their own services, but the filling function doesn't support that yet.
-            aliceServices = object : MockServices(ALICE_KEY, DUMMY_CASH_ISSUER_KEY) {
+            aliceServices = object : MockServices(ALICE_KEY) {
                 override val vaultService: VaultService = makeVaultService(dataSourcePropsAlice)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
@@ -228,15 +228,15 @@ class CommercialPaperTestsGeneric {
                     vaultService.notifyAll(txs.map { it.tx })
                 }
             }
-            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
+            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, issuerServices,atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
             aliceVaultService = aliceServices.vaultService
         }
 
         val dataSourcePropsBigCorp = makeTestDataSourceProperties()
         val databaseBigCorp = configureDatabase(dataSourcePropsBigCorp, makeTestDatabaseProperties())
         databaseBigCorp.transaction {
-            // TODO: Cash issuer should have their own services, but the filling function doesn't support that yet.
-            bigCorpServices = object : MockServices(BIG_CORP_KEY, DUMMY_CASH_ISSUER_KEY) {
+
+            bigCorpServices = object : MockServices(BIG_CORP_KEY) {
                 override val vaultService: VaultService = makeVaultService(dataSourcePropsBigCorp)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
@@ -247,7 +247,7 @@ class CommercialPaperTestsGeneric {
                     vaultService.notifyAll(txs.map { it.tx })
                 }
             }
-            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
+            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, issuerServices,atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
             bigCorpVaultService = bigCorpServices.vaultService
         }
 

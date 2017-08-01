@@ -91,10 +91,12 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
  *
  * The service hub needs to provide at least a key management service and a storage service.
  *
+ * @param issuerServices service hub of the issuer node, which will be used to sign the transaction.
  * @param outputNotary the notary to use for output states. The transaction is NOT signed by this notary.
  * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
  */
 fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
+                                    issuerServices: ServiceHub = this,
                                     outputNotary: Party = DUMMY_NOTARY,
                                     atLeastThisManyStates: Int = 3,
                                     atMostThisManyStates: Int = 10,
@@ -113,7 +115,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
         val issuance = TransactionBuilder(null as Party?)
         cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), me, outputNotary)
 
-        return@map signInitialTransaction(issuance, issuedBy.party.owningKey)
+        return@map issuerServices.signInitialTransaction(issuance, issuedBy.party.owningKey)
     }
 
     recordTransactions(transactions)
@@ -126,8 +128,15 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
     return Vault(states)
 }
 
+/**
+ *
+ * @param issuerServices service hub of the issuer node, which will be used to sign the transaction.
+ * @param outputNotary the notary to use for output states. The transaction is NOT signed by this notary.
+ * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
+ */
 // TODO: need to make all FungibleAsset commands (issue, move, exit) generic
 fun ServiceHub.fillWithSomeTestCommodity(amount: Amount<Commodity>,
+                                         issuerServices: ServiceHub = this,
                                          outputNotary: Party = DUMMY_NOTARY,
                                          ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
                                          ownedBy: AbstractParty? = null,
@@ -138,7 +147,7 @@ fun ServiceHub.fillWithSomeTestCommodity(amount: Amount<Commodity>,
     val commodity = CommodityContract()
     val issuance = TransactionBuilder(null as Party?)
     commodity.generateIssue(issuance, Amount(amount.quantity, Issued(issuedBy.copy(reference = ref), amount.token)), me, outputNotary)
-    val transaction = signInitialTransaction(issuance, issuedBy.party.owningKey)
+    val transaction = issuerServices.signInitialTransaction(issuance, issuedBy.party.owningKey)
 
     recordTransactions(transaction)
 
