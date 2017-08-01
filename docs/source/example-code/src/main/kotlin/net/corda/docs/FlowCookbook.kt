@@ -386,7 +386,6 @@ object FlowCookbook {
             // Optional request verification to further restrict data access.
             subFlow(object :SendTransactionFlow(counterparty, twiceSignedTx){
                 override fun verifyDataRequest(dataRequest: FetchDataFlow.Request.Data) {
-                    super.verifyDataRequest(dataRequest)
                     // Extra request verification.
                 }
             })
