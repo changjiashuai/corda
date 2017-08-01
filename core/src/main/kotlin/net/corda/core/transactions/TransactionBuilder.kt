@@ -160,14 +160,4 @@ open class TransactionBuilder(
         val sig = keyManagementService.sign(wtx.id.bytes, publicKey)
         return SignedTransaction(wtx, ArrayList(listOf(sig)))
     }
-
-    /**
-     * Sign the built transaction and return it. This is an internal function for use by unit tests which do not have
-     * full node.
-     */
-    fun toSignedTransaction(keyPair: KeyPair): SignedTransaction {
-        val wtx = toWireTransaction()
-        val sig = keyPair.sign(wtx.id.bytes)
-        return SignedTransaction(wtx, ArrayList(listOf(sig)))
-    }
 }

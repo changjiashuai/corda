@@ -2,6 +2,7 @@ package net.corda.node.services.database
 
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.contracts.asset.DummyFungibleContract
 import net.corda.core.contracts.*
 import net.corda.core.crypto.toBase58String
@@ -69,7 +70,8 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
             hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
 
-            services = object : MockServices(BOB_KEY) {
+            // TODO: Use separate services for the notary, Bank of Corda, etc.
+            services = object : MockServices(BOB_KEY, BOC_KEY, DUMMY_CASH_ISSUER_KEY, DUMMY_NOTARY_KEY) {
                 override val vaultService: VaultService get() {
                     val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
                     hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
@@ -118,7 +120,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     @Test
     fun `consumed states`() {
         database.transaction {
-            services.consumeCash(50.DOLLARS)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
         }
 
         // structure query
@@ -196,11 +198,11 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     fun `with sorting by state ref desc and asc`() {
         // generate additional state ref indexes
         database.transaction {
-            services.consumeCash(1.DOLLARS)
-            services.consumeCash(2.DOLLARS)
-            services.consumeCash(3.DOLLARS)
-            services.consumeCash(4.DOLLARS)
-            services.consumeCash(5.DOLLARS)
+            services.consumeCash(1.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(2.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(3.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(4.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(5.DOLLARS, notary = DUMMY_NOTARY)
         }
 
         // structure query
@@ -226,11 +228,11 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     fun `with sorting by state ref index and txId desc and asc`() {
         // generate additional state ref indexes
         database.transaction {
-            services.consumeCash(1.DOLLARS)
-            services.consumeCash(2.DOLLARS)
-            services.consumeCash(3.DOLLARS)
-            services.consumeCash(4.DOLLARS)
-            services.consumeCash(5.DOLLARS)
+            services.consumeCash(1.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(2.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(3.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(4.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(5.DOLLARS, notary = DUMMY_NOTARY)
         }
 
         // structure query
@@ -257,7 +259,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     fun `with pagination`() {
         // add 100 additional cash entries
         database.transaction {
-            services.fillWithSomeTestCash(1000.POUNDS, DUMMY_NOTARY, 100, 100, Random(0L))
+            services.fillWithSomeTestCash(1000.POUNDS, DUMMY_NOTARY, 100, 100, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
         }
 
         // structure query
@@ -423,9 +425,9 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
     fun `calculate and order by cash balance for owner and currency`() {
         database.transaction {
 
-            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1), issuerKey = BOC_KEY)
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1))
             services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
-            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2), issuerKey = BOC_KEY)
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2))
         }
 
         // structure query
@@ -616,7 +618,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), ownedBy = ALICE)
             val cashStates = services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L),
-                                            issuedBy = BOB.ref(0), issuerKey = BOB_KEY, ownedBy = (BOB)).states
+                                            issuedBy = BOB.ref(0), ownedBy = (BOB)).states
             // persist additional cash states explicitly with V3 schema
             cashStates.forEach {
                 val cashState = it.state.data
@@ -696,7 +698,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
                 }
 
                 val moreCash = services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L),
-                        issuedBy = BOB.ref(0), issuerKey = BOB_KEY, ownedBy = BOB).states
+                        issuedBy = BOB.ref(0), ownedBy = BOB).states
                 // persist additional cash states explicitly with V3 schema
                 moreCash.forEach {
                     val cashState = it.state.data

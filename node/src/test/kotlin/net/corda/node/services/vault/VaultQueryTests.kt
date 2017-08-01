@@ -48,6 +48,7 @@ import java.util.*
 class VaultQueryTests : TestDependencyInjectionBase() {
 
     lateinit var services: MockServices
+    lateinit var notaryServices: MockServices
     val vaultSvc: VaultService get() = services.vaultService
     val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
     lateinit var database: CordaPersistence
@@ -59,7 +60,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
             val customSchemas = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1)
             val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
-            services = object : MockServices(MEGA_CORP_KEY) {
+            // TODO: Every time we consume states we should use the notary services to confirm the transaction, rather
+            // than MegaCorp self-notarising
+            services = object : MockServices(MEGA_CORP_KEY, DUMMY_NOTARY_KEY) {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
@@ -72,6 +75,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 override val vaultQueryService : VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
             }
         }
+        notaryServices = MockServices(DUMMY_NOTARY_KEY)
     }
 
     @After
@@ -108,10 +112,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             sleep(delay)
 
             // consume some states
-            services.consumeLinearStates(linearStatesXYZ.states.toList())
-            services.consumeLinearStates(linearStatesJKL.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS)
+            services.consumeLinearStates(linearStatesXYZ.states.toList(), DUMMY_NOTARY)
+            services.consumeLinearStates(linearStatesJKL.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" }, DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
             // Total unconsumed states = 4 + 3 + 2 + 1 (new cash change) = 10
             // Total consumed states = 6 + 1 + 2 + 1 = 10
@@ -192,7 +196,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(resultsBeforeConsume.states).hasSize(4)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
 
-            services.consumeCash(75.DOLLARS)
+            services.consumeCash(75.DOLLARS, notary = DUMMY_NOTARY)
 
             val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)
             val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(consumedCriteria, paging)
@@ -242,7 +246,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val issuedStateRefs = issuedStates.states.map { it.ref }.toList()
             stateRefs.addAll(issuedStateRefs)
 
-            val spentStates = services.consumeCash(25.DOLLARS)
+            val spentStates = services.consumeCash(25.DOLLARS, notary = DUMMY_NOTARY)
             var spentStateRefs = spentStates.states.map { it.ref }.toList()
             stateRefs.addAll(spentStateRefs)
 
@@ -267,8 +271,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `unconsumed cash states sorted by state ref txnId and index`() {
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L))
-            services.consumeCash(10.DOLLARS)
-            services.consumeCash(10.DOLLARS)
+            services.consumeCash(10.DOLLARS, notary = DUMMY_NOTARY)
+            services.consumeCash(10.DOLLARS, notary = DUMMY_NOTARY)
 
             val sortAttributeTxnId = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID)
             val sortAttributeIndex = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_INDEX)
@@ -335,9 +339,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(8)
             val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            services.consumeLinearStates(linearStates.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS)
+            services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" }, DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
@@ -360,7 +364,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(resultsBeforeConsume.states).hasSize(4)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
 
-            services.consumeCash(75.DOLLARS)
+            services.consumeCash(75.DOLLARS, notary = DUMMY_NOTARY)
 
             val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(consumedCriteria, paging)
@@ -377,9 +381,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(8)
             val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            services.consumeLinearStates(linearStates.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS) // generates a new change state!
+            services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" }, DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY) // generates a new change state!
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val results = vaultQuerySvc.queryBy<ContractState>(criteria)
@@ -399,7 +403,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(resultsBeforeConsume.states).hasSize(1)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(1)
 
-            services.consumeCash(50.DOLLARS)    // consumed 100 (spent), produced 50 (change)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)    // consumed 100 (spent), produced 50 (change)
 
             val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
             assertThat(resultsAfterConsume.states).hasSize(2)
@@ -775,9 +779,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
-            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1), issuerKey = BOC_KEY)
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1))
             services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
-            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2), issuerKey = BOC_KEY)
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2))
 
             // DOCSTART VaultQueryExample23
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::issuerParty,
@@ -931,7 +935,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            services.consumeCash(100.DOLLARS)
+            services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
 
             val asOfDateTime = TODAY
             val consumedAfterExpression = TimeCondition(
@@ -1077,7 +1081,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.consumeCash(50.DOLLARS)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
             services.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!))
             services.fillWithSomeTestLinearStates(10)
 
@@ -1104,7 +1108,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.consumeCash(50.DOLLARS)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
             // should now have x2 CONSUMED + x2 UNCONSUMED (one spent + one change)
 
             val results = vaultQuerySvc.queryBy<Cash.State>(FungibleAssetQueryCriteria())
@@ -1118,9 +1122,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.consumeCash(50.DOLLARS)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
             val linearStates = services.fillWithSomeTestLinearStates(10)
-            services.consumeLinearStates(linearStates.states.toList())
+            services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
@@ -1150,9 +1154,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             services.fillWithSomeTestLinearStates(8)
             val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            services.consumeLinearStates(linearStates.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS)
+            services.consumeLinearStates(linearStates.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" }, DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val results = vaultQuerySvc.queryBy<LinearState>(criteria)
@@ -1199,9 +1203,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val txns = services.fillWithSomeTestLinearStates(1, "TEST")
             val linearState = txns.states.first()
             val linearId = linearState.state.data.linearId
-            services.evolveLinearState(linearState)  // consume current and produce new state reference
-            services.evolveLinearState(linearState)  // consume current and produce new state reference
-            services.evolveLinearState(linearState)  // consume current and produce new state reference
+            services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
 
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
             // DOCSTART VaultQueryExample9
@@ -1219,9 +1223,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             val txns = services.fillWithSomeTestLinearStates(2, "TEST")
             val linearStates = txns.states.toList()
-            services.evolveLinearStates(linearStates)  // consume current and produce new state reference
-            services.evolveLinearStates(linearStates)  // consume current and produce new state reference
-            services.evolveLinearStates(linearStates)  // consume current and produce new state reference
+            services.evolveLinearStates(linearStates, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearStates(linearStates, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearStates(linearStates, DUMMY_NOTARY)  // consume current and produce new state reference
 
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
             val linearStateCriteria = LinearStateQueryCriteria(linearId = linearStates.map { it.state.data.linearId }, status = Vault.StateStatus.ALL)
@@ -1294,9 +1298,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             val txns = services.fillWithSomeTestLinearStates(1, "TEST")
             val linearState = txns.states.first()
-            val linearState2 = services.evolveLinearState(linearState)  // consume current and produce new state reference
-            val linearState3 = services.evolveLinearState(linearState2)  // consume current and produce new state reference
-            services.evolveLinearState(linearState3)  // consume current and produce new state reference
+            val linearState2 = services.evolveLinearState(linearState, DUMMY_NOTARY)  // consume current and produce new state reference
+            val linearState3 = services.evolveLinearState(linearState2, DUMMY_NOTARY)  // consume current and produce new state reference
+            services.evolveLinearState(linearState3, DUMMY_NOTARY)  // consume current and produce new state reference
 
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with "TEST"
             val linearStateCriteria = LinearStateQueryCriteria(linearId = txns.states.map { it.state.data.linearId }, status = Vault.StateStatus.CONSUMED)
@@ -1380,9 +1384,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(1))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(2))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(3))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), ref = OpaqueBytes.of(1))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), ref = OpaqueBytes.of(2))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), ref = OpaqueBytes.of(3))
 
             val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC),
                     issuerRef = listOf(BOC.ref(1).reference, BOC.ref(2).reference))
@@ -1397,7 +1401,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), issuerKey = MEGA_CORP_KEY, ownedBy = (MEGA_CORP))
+                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MEGA_CORP))
 
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP))
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
@@ -1412,9 +1416,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MEGA_CORP.ref(0), issuerKey = MEGA_CORP_KEY, ownedBy = (MEGA_CORP))
+                    issuedBy = MEGA_CORP.ref(0), ownedBy = (MEGA_CORP))
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L),
-                    issuedBy = MINI_CORP.ref(0), issuerKey = MINI_CORP_KEY, ownedBy = (MINI_CORP))  // irrelevant to this vault
+                    issuedBy = MINI_CORP.ref(0), ownedBy = (MINI_CORP))  // irrelevant to this vault
 
             // DOCSTART VaultQueryExample5.2
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP,MINI_CORP))
@@ -1514,7 +1518,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)))
 
             // DOCSTART VaultQueryExample14
             val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC))
@@ -1557,7 +1561,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val commercialPaper =
                     CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
                         builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        builder.toSignedTransaction(MEGA_CORP_KEY).withAdditionalSignature(DUMMY_NOTARY_KEY)
+                        val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
+                        notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
                     }
 
             services.recordTransactions(commercialPaper)
@@ -1567,7 +1572,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val commercialPaper2 =
                     CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
                         builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        builder.toSignedTransaction(MEGA_CORP_KEY).withAdditionalSignature(DUMMY_NOTARY_KEY)
+                        val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
+                        notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
                     }
             services.recordTransactions(commercialPaper2)
 
@@ -1593,8 +1599,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val commercialPaper =
                     CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
                         builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        builder.toSignedTransaction(MEGA_CORP_KEY).withAdditionalSignature(DUMMY_NOTARY_KEY)
+                        val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
+                        notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
                     }
+            commercialPaper.verifyRequiredSignatures()
             services.recordTransactions(commercialPaper)
 
             // MegaCorp™ now issues £5,000 of commercial paper, to mature in 30 days, owned by itself.
@@ -1602,8 +1610,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val commercialPaper2 =
                     CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
                         builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
-                        builder.toSignedTransaction(MEGA_CORP_KEY).withAdditionalSignature(DUMMY_NOTARY_KEY)
+                        val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
+                        notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
                     }
+            commercialPaper2.verifyRequiredSignatures()
             services.recordTransactions(commercialPaper2)
 
             val result = builder {
@@ -1842,9 +1852,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }
@@ -1880,7 +1890,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(100.POUNDS)
+                services.consumeCash(100.POUNDS, notary = DUMMY_NOTARY)
 
                 val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
                 val (snapshot, updates)  = vaultQuerySvc.trackBy<Cash.State>(criteria)
@@ -1889,9 +1899,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 assertThat(snapshot.statesMetadata).hasSize(1)
 
                 // consume more stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }
@@ -1927,7 +1937,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(99.POUNDS)
+                services.consumeCash(99.POUNDS, notary = DUMMY_NOTARY)
 
                 val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
                 val (snapshot, updates) = vaultQuerySvc.trackBy<Cash.State>(criteria)
@@ -1936,9 +1946,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 assertThat(snapshot.statesMetadata).hasSize(7)
 
                 // consume more stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }
@@ -1992,9 +2002,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }
@@ -2042,9 +2052,9 @@ class VaultQueryTests : TestDependencyInjectionBase() {
                 services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
                 // consume stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                services.consumeCash(100.DOLLARS, notary = DUMMY_NOTARY)
+                services.consumeDeals(dealStates.toList(), DUMMY_NOTARY)
+                services.consumeLinearStates(linearStates.toList(), DUMMY_NOTARY)
 
                 updates
             }

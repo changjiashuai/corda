@@ -216,7 +216,8 @@ class CommercialPaperTestsGeneric {
         val databaseAlice = configureDatabase(dataSourcePropsAlice, makeTestDatabaseProperties())
         databaseAlice.transaction {
 
-            aliceServices = object : MockServices(ALICE_KEY) {
+            // TODO: Cash issuer should have their own services, but the filling function doesn't support that yet.
+            aliceServices = object : MockServices(ALICE_KEY, DUMMY_CASH_ISSUER_KEY) {
                 override val vaultService: VaultService = makeVaultService(dataSourcePropsAlice)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
@@ -227,15 +228,15 @@ class CommercialPaperTestsGeneric {
                     vaultService.notifyAll(txs.map { it.tx })
                 }
             }
-            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
+            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
             aliceVaultService = aliceServices.vaultService
         }
 
         val dataSourcePropsBigCorp = makeTestDataSourceProperties()
         val databaseBigCorp = configureDatabase(dataSourcePropsBigCorp, makeTestDatabaseProperties())
         databaseBigCorp.transaction {
-
-            bigCorpServices = object : MockServices(BIG_CORP_KEY) {
+            // TODO: Cash issuer should have their own services, but the filling function doesn't support that yet.
+            bigCorpServices = object : MockServices(BIG_CORP_KEY, DUMMY_CASH_ISSUER_KEY) {
                 override val vaultService: VaultService = makeVaultService(dataSourcePropsBigCorp)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
@@ -246,7 +247,7 @@ class CommercialPaperTestsGeneric {
                     vaultService.notifyAll(txs.map { it.tx })
                 }
             }
-            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
+            bigCorpVault = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1, issuedBy = DUMMY_CASH_ISSUER)
             bigCorpVaultService = bigCorpServices.vaultService
         }
 
