@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -77,6 +78,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     /** Returns the same transaction but with an additional (unchecked) signature. */
+    @VisibleForTesting
     fun withAdditionalSignature(keyPair: KeyPair) = withAdditionalSignature(keyPair.sign(tx.id.bytes))
 
     /** Returns the same transaction but with an additional (unchecked) signature. */
