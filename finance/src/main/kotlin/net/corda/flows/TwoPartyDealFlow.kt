@@ -3,6 +3,7 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.DealState
 import net.corda.core.contracts.requireThat
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.CollectSignaturesFlow
 import net.corda.core.flows.FinalityFlow
@@ -92,8 +93,12 @@ object TwoPartyDealFlow {
             val handshake = receiveAndValidateHandshake()
 
             progressTracker.currentStep = SIGNING
-            val (utx, additionalSigningPubKeys) = assembleSharedTX(handshake)
-            val ptx = signWithOurKeys(additionalSigningPubKeys, utx)
+            val (utx, additionalSigningPubKeys, additionalSignatures) = assembleSharedTX(handshake)
+            val ptx = if (additionalSignatures.any()) {
+                serviceHub.signInitialTransaction(utx, additionalSigningPubKeys).withAdditionalSignatures(additionalSignatures)
+            } else {
+                serviceHub.signInitialTransaction(utx, additionalSigningPubKeys)
+            }
 
             logger.trace { "Signed proposed transaction." }
 
@@ -136,13 +141,8 @@ object TwoPartyDealFlow {
             return handshake.unwrap { validateHandshake(it) }
         }
 
-        private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
-            // Now sign the transaction with whatever keys we need to move the cash.
-            return serviceHub.signInitialTransaction(ptx, signingPubKeys)
-        }
-
         @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
-        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<PublicKey>>
+        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Triple<TransactionBuilder, List<PublicKey>, List<DigitalSignature.WithKey>>
     }
 
     @CordaSerializable
@@ -178,14 +178,14 @@ object TwoPartyDealFlow {
             return handshake.copy(payload = autoOffer.copy(dealBeingOffered = deal))
         }
 
-        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Pair<TransactionBuilder, List<PublicKey>> {
+        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Triple<TransactionBuilder, List<PublicKey>, List<DigitalSignature.WithKey>> {
             val deal = handshake.payload.dealBeingOffered
             val ptx = deal.generateAgreement(handshake.payload.notary)
 
             // We set the transaction's time-window: it may be that none of the contracts need this!
             // But it can't hurt to have one.
             ptx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
-            return Pair(ptx, arrayListOf(deal.participants.single { it == serviceHub.myInfo.legalIdentity as AbstractParty }.owningKey))
+            return Triple(ptx, arrayListOf(deal.participants.single { it == serviceHub.myInfo.legalIdentity as AbstractParty }.owningKey), emptyList())
         }
     }
 }
