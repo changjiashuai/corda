@@ -814,7 +814,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `aggregate functions count by contract type`() {
         database.transaction {
             // create new states
-            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 10, 10, Random(0L))
             services.fillWithSomeTestLinearStates(1, "XYZ")
             services.fillWithSomeTestLinearStates(2, "JKL")
             services.fillWithSomeTestLinearStates(3, "ABC")
@@ -840,7 +840,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `aggregate functions count by contract type and state status`() {
         database.transaction {
             // create new states
-            services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 10, 10, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, notaryServices, CASH_NOTARY, 10, 10, Random(0L))
             val linearStatesXYZ = services.fillWithSomeTestLinearStates(1, "XYZ")
             val linearStatesJKL = services.fillWithSomeTestLinearStates(2, "JKL")
             services.fillWithSomeTestLinearStates(3, "ABC")
@@ -863,10 +863,10 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             assertThat(dealStateCount).isEqualTo(3L)
 
             // consume some states
-            services.consumeLinearStates(linearStatesXYZ.states.toList())
-            services.consumeLinearStates(linearStatesJKL.states.toList())
-            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" })
-            services.consumeCash(50.DOLLARS)
+            services.consumeLinearStates(linearStatesXYZ.states.toList(), DUMMY_NOTARY)
+            services.consumeLinearStates(linearStatesJKL.states.toList(), DUMMY_NOTARY)
+            services.consumeDeals(dealStates.states.filter { it.state.data.ref == "456" }, DUMMY_NOTARY)
+            services.consumeCash(50.DOLLARS, notary = DUMMY_NOTARY)
 
             // UNCONSUMED states (default)
 
@@ -1765,7 +1765,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
 
             services.fillWithSomeTestLinearStates(1, "TEST1")
             val aState = services.fillWithSomeTestLinearStates(1, "TEST2").states
-            services.consumeLinearStates(aState.toList())
+            services.consumeLinearStates(aState.toList(), DUMMY_NOTARY)
             val uuid = services.fillWithSomeTestLinearStates(1, "TEST3").states.first().state.data.linearId.id
 
             // 2 unconsumed states with same external ID, 1 with different external ID

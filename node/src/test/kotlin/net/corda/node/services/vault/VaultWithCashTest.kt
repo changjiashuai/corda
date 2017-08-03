@@ -135,7 +135,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
         database.transaction {
             // A tx that sends us money.
             services.fillWithSomeTestCash(100.DOLLARS, issuerServices, DUMMY_NOTARY, 10, 10, Random(0L), ownedBy = AnonymousParty(freshKey),
-                    issuedBy = MEGA_CORP.ref(1))
+                    issuedBy = DUMMY_CASH_ISSUER)
             println("Cash balance: ${services.getCashBalance(USD)}")
 
             assertThat(vaultQuery.queryBy<Cash.State>().states).hasSize(10)
