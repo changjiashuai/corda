@@ -1,7 +1,6 @@
 package net.corda.core.crypto
 
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.serialize
 
 /**
  * Using a [MerkleRootWithMeta] object a signer can add extra information on the transaction signature.
@@ -14,7 +13,7 @@ import net.corda.core.serialization.serialize
 class MerkleRootWithMeta(val merkleRoot: SecureHash,
                          val transactionSignatureMeta: TransactionSignatureMeta) {
 
-    fun bytes() = this.serialize().bytes
+    // fun bytes() = this.serialize().bytes
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

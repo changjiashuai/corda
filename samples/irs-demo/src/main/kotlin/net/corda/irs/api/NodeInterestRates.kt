@@ -9,7 +9,6 @@ import net.corda.contracts.math.CubicSplineInterpolator
 import net.corda.contracts.math.Interpolator
 import net.corda.contracts.math.InterpolatorFactory
 import net.corda.core.contracts.Command
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowException

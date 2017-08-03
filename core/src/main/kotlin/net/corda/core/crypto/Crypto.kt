@@ -4,6 +4,7 @@ import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.composite.CompositeSignature
 import net.corda.core.crypto.provider.CordaObjectIdentifier
 import net.corda.core.crypto.provider.CordaSecurityProvider
+import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -417,7 +418,7 @@ object Crypto {
         val sigMetaData: SignatureScheme = findSignatureScheme(keyPair.public)
         if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${sigMetaData.schemeCodeName}" +
                 " is not aligned with the key type: ${sigKey.schemeCodeName}.")
-        val signatureBytes = doSign(sigKey.schemeCodeName, keyPair.private, merkleRootWithMeta.bytes())
+        val signatureBytes = doSign(sigKey.schemeCodeName, keyPair.private, merkleRootWithMeta.serialize().bytes)
         return TransactionSignature(signatureBytes, keyPair.public, merkleRootWithMeta.transactionSignatureMeta)
     }
 
@@ -498,7 +499,7 @@ object Crypto {
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
     fun doVerify(merkleRoot: SecureHash, transactionSignature: TransactionSignature): Boolean {
         val merkleRootWithMeta = MerkleRootWithMeta(merkleRoot, transactionSignature.transactionSignatureMeta)
-        return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, merkleRootWithMeta.bytes())
+        return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, merkleRootWithMeta.serialize().bytes)
     }
 
     /**
@@ -515,7 +516,7 @@ object Crypto {
     @Throws(SignatureException::class)
     fun isValid(merkleRoot: SecureHash, transactionSignature: TransactionSignature): Boolean {
         val merkleRootWithMeta = MerkleRootWithMeta(merkleRoot, transactionSignature.transactionSignatureMeta)
-        return isValid(findSignatureScheme(transactionSignature.by), transactionSignature.by, transactionSignature.bytes, merkleRootWithMeta.bytes())
+        return isValid(findSignatureScheme(transactionSignature.by), transactionSignature.by, transactionSignature.bytes, merkleRootWithMeta.serialize().bytes)
     }
 
     /**

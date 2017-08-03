@@ -39,12 +39,14 @@ class CompositeKeyTests : TestDependencyInjectionBase() {
     val secureHash = message.sha256()
     val merkleRootWithMeta = MerkleRootWithMeta(secureHash, TransactionSignatureMeta(1))
 
-    val aliceSignature = aliceKey.sign(merkleRootWithMeta)
-    val bobSignature = bobKey.sign(merkleRootWithMeta)
-    val charlieSignature = charlieKey.sign(merkleRootWithMeta)
+
+    val aliceSignature by lazy { aliceKey.sign(merkleRootWithMeta) }
+    val bobSignature by lazy { bobKey.sign(merkleRootWithMeta) }
+    val charlieSignature by lazy { charlieKey.sign(merkleRootWithMeta) }
 
     @Test
     fun `(Alice) fulfilled by Alice signature`() {
+        println(aliceKey.serialize().hash)
         assertTrue { alicePublicKey.isFulfilledBy(aliceSignature.by) }
         assertFalse { alicePublicKey.isFulfilledBy(charlieSignature.by) }
     }

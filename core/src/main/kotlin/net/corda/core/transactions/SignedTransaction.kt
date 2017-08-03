@@ -1,16 +1,10 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.contracts.AttachmentResolutionException
-import net.corda.core.contracts.NamedByHash
-import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
-import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -90,7 +84,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * Creates a copy of the SignedTransaction that includes the provided [sigList]. Also propagates the [cachedTransaction]
      * so the contained transaction does not need to be deserialized again.
      */
-    private fun copyWithCache(sigList: Iterable<DigitalSignature.WithKey>): SignedTransaction {
+    private fun copyWithCache(sigList: Iterable<TransactionSignature>): SignedTransaction {
         val cached = cachedTransaction
         return copy(sigs = sigs + sigList).apply {
             cachedTransaction = cached

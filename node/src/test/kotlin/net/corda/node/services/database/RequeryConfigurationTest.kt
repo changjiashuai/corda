@@ -4,11 +4,8 @@ import io.requery.Persistable
 import io.requery.kotlin.eq
 import io.requery.sql.KotlinEntityDataStore
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.*
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.testing.NullPublicKey
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.Vault

@@ -1,8 +1,6 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.TransactionSignatureMeta
@@ -16,9 +14,6 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.LogHelper
 import net.corda.testing.TestDependencyInjectionBase
-import net.corda.node.utilities.transaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.LogHelper
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.node.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat

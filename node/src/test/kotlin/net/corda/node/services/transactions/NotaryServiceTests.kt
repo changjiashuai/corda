@@ -3,7 +3,6 @@ package net.corda.node.services.transactions
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException

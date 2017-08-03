@@ -1,10 +1,6 @@
 package net.corda.core.contracts
 
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.composite.CompositeKey
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.sign
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party

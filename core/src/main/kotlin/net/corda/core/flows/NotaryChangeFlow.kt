@@ -3,6 +3,8 @@ package net.corda.core.flows
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.MerkleRootWithMeta
+import net.corda.core.crypto.TransactionSignatureMeta
 import net.corda.core.identity.Party
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -36,7 +38,8 @@ class NotaryChangeFlow<out T : ContractState>(
         val participantKeys = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()
         // TODO: We need a much faster way of finding our key in the transaction
         val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()
-        val mySignature = serviceHub.keyManagementService.sign(tx.id.bytes, myKey)
+        val merkleRootWithMeta = MerkleRootWithMeta(tx.id, TransactionSignatureMeta(serviceHub.myInfo.platformVersion))
+        val mySignature = serviceHub.keyManagementService.sign(merkleRootWithMeta, myKey)
         val stx = SignedTransaction(tx, listOf(mySignature))
 
         return AbstractStateReplacementFlow.UpgradeTx(stx, participantKeys, myKey)
