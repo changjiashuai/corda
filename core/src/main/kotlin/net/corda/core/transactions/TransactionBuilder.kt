@@ -154,13 +154,6 @@ open class TransactionBuilder(
     @Deprecated("Signatures should be gathered on a SignedTransaction instead.")
     protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
 
-    /** Adds the signature directly to the transaction, without checking it for validity. */
-    @Deprecated("Use ServiceHub.toSignedTransaction() instead.")
-    fun addSignatureUnchecked(sig: DigitalSignature.WithKey): TransactionBuilder {
-        currentSigs.add(sig)
-        return this
-    }
-
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use
      * [ServiceHub.signInitialTransaction] instead.
