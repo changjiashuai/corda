@@ -113,7 +113,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
         val issuance = TransactionBuilder(null as Party?)
         cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), me, outputNotary)
 
-        return@map issuance.signInitialTransaction(issuerKey)
+        return@map issuance.toSignedTransaction(issuerKey)
     }
 
     recordTransactions(transactions)
@@ -139,7 +139,7 @@ fun ServiceHub.fillWithSomeTestCommodity(amount: Amount<Commodity>,
     val commodity = CommodityContract()
     val issuance = TransactionBuilder(null as Party?)
     commodity.generateIssue(issuance, Amount(amount.quantity, Issued(issuedBy.copy(reference = ref), amount.token)), me, outputNotary)
-    val transaction = issuance.signInitialTransaction(issuerKey)
+    val transaction = issuance.toSignedTransaction(issuerKey)
 
     recordTransactions(transaction)
 
@@ -179,7 +179,7 @@ fun <T : LinearState> ServiceHub.consume(states: List<StateAndRef<T>>) {
     states.forEach {
         val consumedTx = TransactionBuilder(notary = DUMMY_NOTARY).apply {
             addInputState(it)
-        }.signInitialTransaction(DUMMY_NOTARY_KEY)
+        }.toSignedTransaction(DUMMY_NOTARY_KEY)
 
         recordTransactions(consumedTx)
     }
@@ -189,7 +189,7 @@ fun <T : LinearState> ServiceHub.consumeAndProduce(stateAndRef: StateAndRef<T>):
     // Create a txn consuming different contract types
     val consumedTx = TransactionBuilder(notary = DUMMY_NOTARY).apply {
         addInputState(stateAndRef)
-    }.signInitialTransaction(DUMMY_NOTARY_KEY)
+    }.toSignedTransaction(DUMMY_NOTARY_KEY)
 
     recordTransactions(consumedTx)
 
@@ -197,7 +197,7 @@ fun <T : LinearState> ServiceHub.consumeAndProduce(stateAndRef: StateAndRef<T>):
     val producedTx = TransactionBuilder(notary = DUMMY_NOTARY).apply {
         addOutputState(DummyLinearContract.State(linearId = stateAndRef.state.data.linearId,
                 participants = stateAndRef.state.data.participants))
-    }.signInitialTransaction(DUMMY_NOTARY_KEY)
+    }.toSignedTransaction(DUMMY_NOTARY_KEY)
 
     recordTransactions(producedTx)
 
@@ -220,7 +220,7 @@ fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): Vault
     // A tx that spends our money.
     val spendTX = TransactionBuilder(DUMMY_NOTARY).apply {
         vaultService.generateSpend(this, amount, to)
-    }.signInitialTransaction(DUMMY_NOTARY_KEY)
+    }.toSignedTransaction(DUMMY_NOTARY_KEY)
 
     recordTransactions(spendTX)
 

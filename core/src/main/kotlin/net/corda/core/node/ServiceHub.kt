@@ -141,7 +141,7 @@ interface ServiceHub : ServicesForResolution {
      * to sign with.
      * @return Returns a SignedTransaction with the new node signature attached.
      */
-    fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey): SignedTransaction = builder.signInitialTransaction(keyManagementService, publicKey)
+    fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey): SignedTransaction = builder.toSignedTransaction(keyManagementService, publicKey)
 
     /**
      * Helper method to construct an initial partially signed transaction from a TransactionBuilder
